@@ -53,15 +53,18 @@ def create_qa_chain(vector_store, llm):
 
 def fetch_sitemap_urls(url):
     """Fetches URLs from a sitemap.xml file."""
-    sitemap_url = url.rstrip('/') + '/sitemap.xml' # Ensure no double slash
+    sitemap_url = []
+    sitemap_url.append(url.rstrip('/') + '/sitemap.xml') # Ensure no double slash
+    sitemap_url.append(url.rstrip('/') + '/sitemap/sitemap_navigation.xml')
     try:
-        response = requests.get(sitemap_url)
-        response.raise_for_status()  # Raise an exception for bad status codes
-
-        root = ET.fromstring(response.content)
         urls = []
-        for element in root.findall('.//{http://www.sitemaps.org/schemas/sitemap/0.9}loc'): # Namespace is important!
-            urls.append(element.text)
+        for sitemap in sitemap_url:
+            response = requests.get(sitemap)
+            response.raise_for_status()  # Raise an exception for bad status codes
+
+            root = ET.fromstring(response.content)
+            for element in root.findall('.//{http://www.sitemaps.org/schemas/sitemap/0.9}loc'): # Namespace is important!
+                urls.append(element.text)
         return urls
     except requests.exceptions.RequestException as e:
         st.warning(f"Could not fetch sitemap from {sitemap_url}. Error: {e}")
