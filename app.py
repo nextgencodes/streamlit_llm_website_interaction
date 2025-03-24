@@ -69,12 +69,6 @@ def fetch_sitemap_urls(url):
                 urls.append(element.text)
         except:
             None
-        '''
-        except requests.exceptions.RequestException as e:
-            st.warning(f"Alert!!! Could not fetch all sitemap from {sitemap_url}. Error: {e}")
-        except ET.ParseError as e:
-            st.warning(f"Could not parse sitemap XML from {sitemap_url}. Error: {e}")
-        '''
     if urls:
         return urls
     else:
