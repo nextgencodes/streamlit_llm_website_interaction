@@ -68,7 +68,7 @@ def fetch_sitemap_urls(url):
             for element in root.findall('.//{http://www.sitemaps.org/schemas/sitemap/0.9}loc'): # Namespace is important!
                 urls.append(element.text)
         except:
-            None
+            pass
     if urls:
         return urls
     else:
