@@ -56,6 +56,7 @@ def fetch_sitemap_urls(url):
     sitemap_url = []
     sitemap_url.append(url.rstrip('/') + '/sitemap.xml') # Ensure no double slash
     sitemap_url.append(url.rstrip('/') + '/sitemap/sitemap_navigation.xml')
+    sitemap_url.append(url.rstrip('/') + '/site-map/')
     try:
         urls = []
         for sitemap in sitemap_url:
@@ -67,7 +68,7 @@ def fetch_sitemap_urls(url):
                 urls.append(element.text)
         return urls
     except requests.exceptions.RequestException as e:
-        st.warning(f"Could not fetch sitemap from {sitemap_url}. Error: {e}")
+        st.warning(f"Alert!!! Could not fetch all sitemap from {sitemap_url}. Error: {e}")
         return [] # Return empty list if sitemap fetch fails
     except ET.ParseError as e:
         st.warning(f"Could not parse sitemap XML from {sitemap_url}. Error: {e}")
