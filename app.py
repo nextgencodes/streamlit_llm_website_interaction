@@ -57,22 +57,22 @@ def fetch_sitemap_urls(url):
     sitemap_url.append(url.rstrip('/') + '/sitemap.xml') # Ensure no double slash
     sitemap_url.append(url.rstrip('/') + '/sitemap/sitemap_navigation.xml')
     sitemap_url.append(url.rstrip('/') + '/site-map/')
-    try:
-        urls = []
-        for sitemap in sitemap_url:
+    
+    urls = []
+    for sitemap in sitemap_url:
+        try:
             response = requests.get(sitemap)
             response.raise_for_status()  # Raise an exception for bad status codes
 
             root = ET.fromstring(response.content)
             for element in root.findall('.//{http://www.sitemaps.org/schemas/sitemap/0.9}loc'): # Namespace is important!
                 urls.append(element.text)
-        return urls
-    except requests.exceptions.RequestException as e:
-        st.warning(f"Alert!!! Could not fetch all sitemap from {sitemap_url}. Error: {e}")
-        return [] # Return empty list if sitemap fetch fails
-    except ET.ParseError as e:
-        st.warning(f"Could not parse sitemap XML from {sitemap_url}. Error: {e}")
-        return [] # Return empty list if sitemap parsing fails
+        except requests.exceptions.RequestException as e:
+            st.warning(f"Alert!!! Could not fetch all sitemap from {sitemap_url}. Error: {e}")
+        except ET.ParseError as e:
+            st.warning(f"Could not parse sitemap XML from {sitemap_url}. Error: {e}")
+    return urls
+    
 
 # --- Streamlit App ---
 st.title("Web Content Q&A Tool")
