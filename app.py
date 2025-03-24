@@ -11,8 +11,8 @@ import xml.etree.ElementTree as ET
 
 
 # --- Setup ---
-#api_key = st.secrets["GOOGLE_API_KEY"] # Store your API key in Streamlit secrets for security
-api_key = st.text_input("Enter your Google AI Studio API Key:", type="password") # Password input
+api_key = st.secrets["GOOGLE_API_KEY"] # Store your API key in Streamlit secrets for security
+#api_key = st.text_input("Enter your Google AI Studio API Key:", type="password") # Password input
 
 def initialize_llm(GOOGLE_API_KEY):
     """Initializes the Gemini Pro LLM."""
