@@ -8,7 +8,9 @@ from langchain_google_genai.embeddings import GoogleGenerativeAIEmbeddings
 from langchain_google_genai import GoogleGenerativeAI
 import requests
 import xml.etree.ElementTree as ET
-import concurrent.futures # Import for multithreading
+import nest_asyncio
+
+nest_asyncio.apply()
 
 # --- Setup ---
 #api_key_secret = st.secrets.get("GOOGLE_API_KEY") # Access API key from secrets, use .get() to avoid errors if not set
@@ -22,22 +24,21 @@ def initialize_embeddings(GOOGLE_API_KEY):
     """Initializes the Gemini Pro embeddings model."""
     return GoogleGenerativeAIEmbeddings(model="models/embedding-001", google_api_key=GOOGLE_API_KEY)
 
-def ingest_urls(urls,GOOGLE_API_KEY):
+def ingest_urls(urls, api_key): # Take api_key as argument
     """Ingests content from URLs and creates a vector store."""
-    loaders = [WebBaseLoader(url) for url in urls]
-    documents = []
-    for loader in loaders:
-        try:  # Error handling for individual URL loading
-            documents.extend(loader.load())
-        except Exception as e:
-            st.error(f"Error loading URL: {loader.web_path}. Error: {e}")
+    loader = WebBaseLoader(all_urls_to_load, continue_on_failure=True)
+    loader.requests_per_second = 10
+    try:  # Error handling for individual URL loading
+        documents = loader.aload()
+    except Exception as e:
+        st.error(f"Error loading URLs. Error: {e}")
     if not documents:
         return None # Return None if no documents loaded successfully
 
     text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=200)
     texts = text_splitter.split_documents(documents)
     print(texts)
-    embeddings = initialize_embeddings(GOOGLE_API_KEY)
+    embeddings = initialize_embeddings(api_key) # Pass api_key
     vector_store = FAISS.from_documents(texts, embeddings)
     return vector_store
 
@@ -113,25 +114,16 @@ if ingest_button2:
 
     all_urls_to_load = []
 
-    with st.spinner("Fetching sitemaps in parallel..."): # Spinner for sitemap fetching
-        with concurrent.futures.ThreadPoolExecutor(max_workers=20) as executor: # Adjust max_workers as needed
-            future_to_url = {executor.submit(fetch_sitemap_urls, url): url for url in urls}
-            for future in concurrent.futures.as_completed(future_to_url):
-                url = future_to_url[future]
-                try:
-                    sitemap_urls = future.result()
-                    if sitemap_urls:
-                        all_urls_to_load.extend(sitemap_urls)
-                    else:
-                        st.info(f"No sitemap URLs found or error fetching sitemap for {url}, using base URL instead.") # Inform user about fallback
-                        all_urls_to_load.append(url) # Fallback to original url if sitemap fails
-                except Exception as exc:
-                    st.error(f"URL {url} generated an exception: {exc}")
-                    all_urls_to_load.append(url) # Fallback even on exception during sitemap processing
-
+    for url in urls:
+        sitemap_urls = fetch_sitemap_urls(url)
+        if sitemap_urls:
+            all_urls_to_load.extend(sitemap_urls)
+        else:
+            all_urls_to_load.append(url) # If sitemap fails, fallback to original url
 
     if not all_urls_to_load:
         st.warning("No URLs to process after sitemap extraction.")
+
     else:
         with st.spinner("Ingesting content from URLs and subdomains..."): # Separate spinner for content ingestion
             st.session_state['vector_store'] = ingest_urls(all_urls_to_load, api_key) # Store in session state and use determined api_key
