@@ -8,7 +8,7 @@ from langchain_google_genai.embeddings import GoogleGenerativeAIEmbeddings
 from langchain_google_genai import GoogleGenerativeAI
 import requests
 import xml.etree.ElementTree as ET
-
+import concurrent.futures # Import for multithreading
 
 # --- Setup ---
 api_key = st.secrets["GOOGLE_API_KEY"] # Store your API key in Streamlit secrets for security
@@ -105,18 +105,27 @@ if ingest_button2:
 
     all_urls_to_load = []
 
-    for url in urls:
-        sitemap_urls = fetch_sitemap_urls(url)
-        if sitemap_urls:
-            all_urls_to_load.extend(sitemap_urls)
-        else:
-            all_urls_to_load.append(url) # If sitemap fails, fallback to original url
+    with st.spinner("Fetching sitemaps in parallel..."): # Spinner for sitemap fetching
+        with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor: # Adjust max_workers as needed
+            future_to_url = {executor.submit(fetch_sitemap_urls, url): url for url in urls}
+            for future in concurrent.futures.as_completed(future_to_url):
+                url = future_to_url[future]
+                try:
+                    sitemap_urls = future.result()
+                    if sitemap_urls:
+                        all_urls_to_load.extend(sitemap_urls)
+                    else:
+                        st.info(f"No sitemap URLs found or error fetching sitemap for {url}, using base URL instead.") # Inform user about fallback
+                        all_urls_to_load.append(url) # Fallback to original url if sitemap fails
+                except Exception as exc:
+                    st.error(f"URL {url} generated an exception: {exc}")
+                    all_urls_to_load.append(url) # Fallback even on exception during sitemap processing
+
 
     if not all_urls_to_load:
         st.warning("No URLs to process after sitemap extraction.")
-
     else:
-        with st.spinner("Ingesting URLs and subdomains..."):
+        with st.spinner("Ingesting content from URLs and subdomains..."): # Separate spinner for content ingestion
             st.session_state['vector_store'] = ingest_urls(all_urls_to_load, api_key) # Store in session state
 
 
@@ -137,4 +146,3 @@ if ask_button:
                     st.error(f"Error during question answering: {e}")
     else:
         st.warning("Please ingest URLs first before asking a question.")
-
