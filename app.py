@@ -11,8 +11,8 @@ import xml.etree.ElementTree as ET
 import concurrent.futures # Import for multithreading
 
 # --- Setup ---
-api_key = st.secrets["GOOGLE_API_KEY"] # Store your API key in Streamlit secrets for security
-#api_key = st.text_input("Enter your Google AI Studio API Key:", type="password") # Password input
+#api_key_secret = st.secrets.get("GOOGLE_API_KEY") # Access API key from secrets, use .get() to avoid errors if not set
+api_key_input = st.text_input("Enter your Google AI Studio API Key (Optional, will use secrets if empty):", type="password") # Password input
 
 def initialize_llm(GOOGLE_API_KEY):
     """Initializes the Gemini Pro LLM."""
@@ -88,6 +88,14 @@ with col2:
 question = st.text_input("Ask a question about the content:")
 ask_button = st.button("Ask Question")
 
+# Determine API key: Use text input if provided, otherwise fallback to secrets
+api_key = api_key_input.strip()
+if not api_key:
+    api_key = st.secrets.get("GOOGLE_API_KEY")
+    if not api_key:
+        st.error("Please enter your Google API Key in the text box or set it as a Streamlit secret.")
+        st.stop() # Stop execution if no API key is found
+
 if ingest_button1:
     urls = [url.strip() for url in url_input.strip().split('\n') if url.strip()] # Split URLs and remove empty ones
 
@@ -95,7 +103,7 @@ if ingest_button1:
         st.warning("Please enter at least one URL.")
     else:
         with st.spinner("Ingesting URLs..."):
-            st.session_state['vector_store'] = ingest_urls(urls, api_key) # Store in session state
+            st.session_state['vector_store'] = ingest_urls(urls, api_key) # Store in session state and use determined api_key
 
 if ingest_button2:
     urls = [url.strip() for url in url_input.strip().split('\n') if url.strip()] # Split URLs and remove empty ones
@@ -126,7 +134,7 @@ if ingest_button2:
         st.warning("No URLs to process after sitemap extraction.")
     else:
         with st.spinner("Ingesting content from URLs and subdomains..."): # Separate spinner for content ingestion
-            st.session_state['vector_store'] = ingest_urls(all_urls_to_load, api_key) # Store in session state
+            st.session_state['vector_store'] = ingest_urls(all_urls_to_load, api_key) # Store in session state and use determined api_key
 
 
 if ask_button:
@@ -135,7 +143,7 @@ if ask_button:
             st.warning("Please enter a question.")
         else:
             with st.spinner("Answering question..."):
-                llm = initialize_llm(api_key)
+                llm = initialize_llm(api_key) # Use determined api_key
                 qa_chain = create_qa_chain(st.session_state['vector_store'], llm) # Retrieve from session state
 
                 try:
