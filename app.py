@@ -106,7 +106,7 @@ if ingest_button2:
     all_urls_to_load = []
 
     with st.spinner("Fetching sitemaps in parallel..."): # Spinner for sitemap fetching
-        with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor: # Adjust max_workers as needed
+        with concurrent.futures.ThreadPoolExecutor(max_workers=20) as executor: # Adjust max_workers as needed
             future_to_url = {executor.submit(fetch_sitemap_urls, url): url for url in urls}
             for future in concurrent.futures.as_completed(future_to_url):
                 url = future_to_url[future]
